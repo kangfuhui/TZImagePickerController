@@ -18,7 +18,7 @@
 @interface TZPhotoPickerController ()<UICollectionViewDataSource,UICollectionViewDelegate,UIImagePickerControllerDelegate,UINavigationControllerDelegate> {
     NSMutableArray *_models;
     
-    UIButton *_previewButton;
+    UIButton *_giveupButton;
     UIButton *_okButton;
     UIImageView *_numberImageView;
     UILabel *_numberLable;
@@ -123,7 +123,7 @@ static CGSize AssetGridThumbnailSize;
     [super viewWillAppear:animated];
     [self scrollCollectionViewToBottom];
     // Determine the size of the thumbnails to request from the PHCachingImageManager
-    CGFloat scale = 2.0;
+    CGFloat scale = [UIScreen mainScreen].scale;
     CGSize cellSize = ((UICollectionViewFlowLayout *)_collectionView.collectionViewLayout).itemSize;
     AssetGridThumbnailSize = CGSizeMake(cellSize.width * scale, cellSize.height * scale);
 }
@@ -141,19 +141,19 @@ static CGSize AssetGridThumbnailSize;
     CGFloat rgb = 253 / 255.0;
     bottomToolBar.backgroundColor = [UIColor colorWithRed:rgb green:rgb blue:rgb alpha:1.0];
     
-    _previewButton = [UIButton buttonWithType:UIButtonTypeCustom];
-    _previewButton.frame = CGRectMake(10, 3, 44, 44);
-    [_previewButton addTarget:self action:@selector(previewButtonClick) forControlEvents:UIControlEventTouchUpInside];
-    _previewButton.titleLabel.font = [UIFont systemFontOfSize:16];
-    [_previewButton setTitle:@"预览" forState:UIControlStateNormal];
-    [_previewButton setTitle:@"预览" forState:UIControlStateDisabled];
-    [_previewButton setTitleColor:[UIColor blackColor] forState:UIControlStateNormal];
-    [_previewButton setTitleColor:[UIColor lightGrayColor] forState:UIControlStateDisabled];
-    _previewButton.enabled = tzImagePickerVc.selectedModels.count;
+    _giveupButton = [UIButton buttonWithType:UIButtonTypeCustom];
+    _giveupButton.frame = CGRectMake(10, 3, 64, 44);
+    [_giveupButton addTarget:self action:@selector(giveupButtonClick) forControlEvents:UIControlEventTouchUpInside];
+    _giveupButton.titleLabel.font = [UIFont systemFontOfSize:16];
+    [_giveupButton setTitle:@"不选图片" forState:UIControlStateNormal];
+    [_giveupButton setTitle:@"不选图片" forState:UIControlStateHighlighted];
+    [_giveupButton setTitleColor:[UIColor blackColor] forState:UIControlStateNormal];
+    [_giveupButton setTitleColor:[UIColor lightGrayColor] forState:UIControlStateHighlighted];
+    
     
     if (tzImagePickerVc.allowPickingOriginalPhoto) {
         _originalPhotoButton = [UIButton buttonWithType:UIButtonTypeCustom];
-        _originalPhotoButton.frame = CGRectMake(50, self.view.tz_height - 50, 130, 50);
+        _originalPhotoButton.frame = CGRectMake(80, self.view.tz_height - 50, 130, 50);
         _originalPhotoButton.imageEdgeInsets = UIEdgeInsetsMake(0, -8, 0, 0);
         _originalPhotoButton.contentEdgeInsets = UIEdgeInsetsMake(0, -45, 0, 0);
         [_originalPhotoButton addTarget:self action:@selector(originalPhotoButtonClick) forControlEvents:UIControlEventTouchUpInside];
@@ -205,7 +205,7 @@ static CGSize AssetGridThumbnailSize;
     divide.frame = CGRectMake(0, 0, self.view.tz_width, 1);
 
     [bottomToolBar addSubview:divide];
-    [bottomToolBar addSubview:_previewButton];
+    [bottomToolBar addSubview:_giveupButton];
     [bottomToolBar addSubview:_okButton];
     [bottomToolBar addSubview:_numberImageView];
     [bottomToolBar addSubview:_numberLable];
@@ -227,9 +227,22 @@ static CGSize AssetGridThumbnailSize;
     }
 }
 
-- (void)previewButtonClick {
-    TZPhotoPreviewController *photoPreviewVc = [[TZPhotoPreviewController alloc] init];
-    [self pushPhotoPrevireViewController:photoPreviewVc];
+- (void)giveupButtonClick
+{
+    TZImagePickerController *tzImagePickerVc = (TZImagePickerController *)self.navigationController;
+    if ([tzImagePickerVc.pickerDelegate respondsToSelector:@selector(imagePickerController:didFinishPickingPhotos:sourceAssets:isSelectOriginalPhoto:)]) {
+        [tzImagePickerVc.pickerDelegate imagePickerController:tzImagePickerVc didFinishPickingPhotos:nil sourceAssets:nil isSelectOriginalPhoto:_isSelectOriginalPhoto];
+    }
+    if ([tzImagePickerVc.pickerDelegate respondsToSelector:@selector(imagePickerController:didFinishPickingPhotos:sourceAssets:isSelectOriginalPhoto:infos:)]) {
+        [tzImagePickerVc.pickerDelegate imagePickerController:tzImagePickerVc didFinishPickingPhotos:nil sourceAssets:nil isSelectOriginalPhoto:_isSelectOriginalPhoto infos:nil];
+    }
+    if (tzImagePickerVc.didFinishPickingPhotosHandle) {
+        tzImagePickerVc.didFinishPickingPhotosHandle(nil,nil,_isSelectOriginalPhoto);
+    }
+    if (tzImagePickerVc.didFinishPickingPhotosWithInfosHandle) {
+        tzImagePickerVc.didFinishPickingPhotosWithInfosHandle(nil,nil,_isSelectOriginalPhoto,nil);
+    }
+    [self.navigationController dismissViewControllerAnimated:YES completion:nil];
 }
 
 - (void)originalPhotoButtonClick {
@@ -386,7 +399,7 @@ static CGSize AssetGridThumbnailSize;
 - (void)refreshBottomToolBarStatus {
     TZImagePickerController *imagePickerVc = (TZImagePickerController *)self.navigationController;
     
-    _previewButton.enabled = imagePickerVc.selectedModels.count > 0;
+    
     _okButton.enabled = imagePickerVc.selectedModels.count > 0;
     
     _numberImageView.hidden = imagePickerVc.selectedModels.count <= 0;
